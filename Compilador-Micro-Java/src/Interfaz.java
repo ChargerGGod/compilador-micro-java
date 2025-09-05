@@ -30,8 +30,12 @@ public class Interfaz extends JFrame {
 
         JButton tokenButton = new JButton("Token");
         tokenButton.setFocusable(false);
+        JButton sintaxisButton = new JButton("Sintaxis");
+        sintaxisButton.setFocusable(false);
+
         menuBar.add(Box.createHorizontalStrut(10));
         menuBar.add(tokenButton);
+        menuBar.add(sintaxisButton);
 
         setJMenuBar(menuBar);
 
@@ -226,18 +230,41 @@ public class Interfaz extends JFrame {
                 tableModel.setRowCount(0);
                 errorArea.setText("");
 
-                // Crear instancia de Lexico y tokenizar el texto del área de texto
                 Lexico lexico = new Lexico();
                 java.util.ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
 
                 String errores = lexico.getErrores();
                 errorArea.setText(errores);
 
-                // Solo actualizar la tabla si NO hay errores
                 if (errores.trim().isEmpty()) {
                     for (Token token : tokens) {
                         tableModel.addRow(new Object[]{token.getToken(), token.getLexema()});
                     }
+                }
+            }
+        });
+
+        // Acción para el botón Sintaxis
+        sintaxisButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                errorArea.setText("");
+                Lexico lexico = new Lexico();
+                java.util.ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
+                String erroresLexico = lexico.getErrores();
+
+                if (!erroresLexico.trim().isEmpty()) {
+                    errorArea.setText("Errores léxicos:\n" + erroresLexico);
+                    return;
+                }
+
+                Sintactico sintactico = new Sintactico(new java.util.ArrayList<>(tokens));
+                boolean correcto = sintactico.sintaxisCorrecta();
+
+                if (correcto) {
+                    errorArea.setText("Correcto");
+                } else {
+                    errorArea.setText("Error sintáctico");
                 }
             }
         });
