@@ -13,14 +13,15 @@ public class Interfaz extends JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH); 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setMinimumSize(new Dimension(800, 600));
-        // Barra de menú
         JMenuBar menuBar = new JMenuBar();
 
         JMenu menuArchivo = new JMenu("Archivo");
         JMenuItem abrirItem = new JMenuItem("Abrir");
         JMenuItem guardarItem = new JMenuItem("Guardar");
+        JMenuItem guardarComoItem = new JMenuItem("Guardar como");
         menuArchivo.add(abrirItem);
         menuArchivo.add(guardarItem);
+        menuArchivo.add(guardarComoItem);
 
         JMenu menuVista = new JMenu("Vista");
 
@@ -146,8 +147,6 @@ public class Interfaz extends JFrame {
 
         final java.io.File[] archivoActual = {null};
 
-        JMenuItem guardarComoItem = new JMenuItem("Guardar como");
-        menuArchivo.add(guardarComoItem);
 
         abrirItem.addActionListener(new ActionListener() {
             @Override
@@ -224,7 +223,6 @@ public class Interfaz extends JFrame {
         tokenButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Limpiar la tabla y errores antes de procesar
                 tableModel.setRowCount(0);
                 errorArea.setText("");
 
@@ -232,7 +230,6 @@ public class Interfaz extends JFrame {
                 Lexico lexico = new Lexico();
                 java.util.ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
 
-                // Mostrar errores en el área de errores
                 String errores = lexico.getErrores();
                 errorArea.setText(errores);
 

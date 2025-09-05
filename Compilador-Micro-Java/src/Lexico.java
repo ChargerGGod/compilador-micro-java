@@ -1,5 +1,28 @@
 import java.util.ArrayList;
 public class Lexico {
+    /*
+     * class = 1
+     * int = 2
+     * boolean = 3
+     * while = 4
+     * print = 5
+     * true = 6
+     * false = 7
+     * NUM = 8
+     * ID = 9
+     * { = 10
+     * } = 11
+     * ( = 12
+     * ) = 13
+     * ; = 14
+     * = = 15
+     * + = 16
+     * - = 17
+     * < = 18
+     * > = 19
+     * * = 20
+     * 
+     */
     String[] palabrasResevadas = {"class", "int", "boolean", "while", "print", "true", "false"};
     private StringBuilder errores = new StringBuilder();
 
@@ -21,55 +44,55 @@ public class Lexico {
                     i++;
                 }
                 i--;
-                tokens.add(new Token("NUM", numero));
+                tokens.add(new Token("NUM", numero,8));
             } else {
                 if (!identificador.equals("")) {
                     boolean esPalabraReservada = false;
-                    for (String palabraReservada : palabrasResevadas) {
-                        if (identificador.equals(palabraReservada)) {
-                            tokens.add(new Token("PR", identificador));
+                    for (int j = 0; j< palabrasResevadas.length;j++) {
+                        if (identificador.equals(palabrasResevadas[j])) {
+                            tokens.add(new Token("PR", identificador,(j+1)));
                             esPalabraReservada = true;
                             break;
                         }
                     }
                     if (!esPalabraReservada) {
-                        tokens.add(new Token("ID", identificador));
+                        tokens.add(new Token("ID", identificador,9));
                     }
                     identificador = "";
                 }
                 switch (caracter) {
                     case '{':
-                        tokens.add(new Token("LLAVEAPER", "{"));
+                        tokens.add(new Token("LLAVEAPER", "{",10));
                         break;
                     case '}':
-                        tokens.add(new Token("LLAVECERR", "}"));
+                        tokens.add(new Token("LLAVECERR", "}",11));
                         break;
                     case '(':
-                        tokens.add(new Token("PARENTESISAPER", "("));
+                        tokens.add(new Token("PARENTESISAPER", "(",12));
                         break;
                     case ')':
-                        tokens.add(new Token("PARENTESISCER", ")"));
+                        tokens.add(new Token("PARENTESISCER", ")",13));
                         break;
                     case ';':
-                        tokens.add(new Token("PUNTOYCOMA", ";"));
+                        tokens.add(new Token("PUNTOYCOMA", ";",14));
                         break;
                     case '=':
-                        tokens.add(new Token("IGUAL", "="));
+                        tokens.add(new Token("IGUAL", "=",15));
                         break;
                     case '+':
-                        tokens.add(new Token("MAS", "+"));
+                        tokens.add(new Token("MAS", "+",16));
                         break;
                     case '-':
-                        tokens.add(new Token("MENOS", "-"));
+                        tokens.add(new Token("MENOS", "-",17));
                         break;
                     case '<':
-                        tokens.add(new Token("MENORQUE", "<"));
+                        tokens.add(new Token("MENORQUE", "<",18));
                         break;
                     case '>':
-                        tokens.add(new Token("MAYORQUE", ">"));
+                        tokens.add(new Token("MAYORQUE", ">",19));
                         break;
                     case '*':
-                        tokens.add(new Token("MULT", "*"));
+                        tokens.add(new Token("MULT", "*",20));
                         break;
                     case '\n':
                         linea++;
