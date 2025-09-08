@@ -2,6 +2,5 @@ class SUMA {
 	int x; 
 	x1 = 15; 
 	x = x * 2; 
-	print(x); 
-	hola 
+	print(x); asda
 }

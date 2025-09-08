@@ -6,6 +6,10 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class Interfaz extends JFrame {
     public Interfaz() {
@@ -149,7 +153,7 @@ public class Interfaz extends JFrame {
             }
         });
 
-        final java.io.File[] archivoActual = {null};
+        final File[] archivoActual = {null};
 
 
         abrirItem.addActionListener(new ActionListener() {
@@ -160,10 +164,10 @@ public class Interfaz extends JFrame {
                 fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos de texto (*.txt)", "txt"));
                 int resultado = fileChooser.showOpenDialog(Interfaz.this);
                 if (resultado == JFileChooser.APPROVE_OPTION) {
-                    java.io.File archivo = fileChooser.getSelectedFile();
+                    File archivo = fileChooser.getSelectedFile();
                     try {
-                        java.nio.file.Path path = archivo.toPath();
-                        String contenido = new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8);
+                        Path path = archivo.toPath();
+                        String contenido = new String(Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8);
                         textArea.setText(contenido);
                         archivoActual[0] = archivo; // Guardar referencia al archivo abierto
                     } catch (Exception ex) {
@@ -179,7 +183,7 @@ public class Interfaz extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (archivoActual[0] != null) {
                     try {
-                        java.nio.file.Files.write(archivoActual[0].toPath(), textArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        Files.write(archivoActual[0].toPath(), textArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8));
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(Interfaz.this, "No se pudo guardar el archivo:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -200,10 +204,10 @@ public class Interfaz extends JFrame {
                     java.io.File archivo = fileChooser.getSelectedFile();
                     // Asegura que el archivo tenga extensión .txt
                     if (!archivo.getName().toLowerCase().endsWith(".txt")) {
-                        archivo = new java.io.File(archivo.getParentFile(), archivo.getName() + ".txt");
+                        archivo = new File(archivo.getParentFile(), archivo.getName() + ".txt");
                     }
                     try {
-                        java.nio.file.Files.write(archivo.toPath(), textArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        Files.write(archivo.toPath(), textArea.getText().getBytes(java.nio.charset.StandardCharsets.UTF_8));
                         archivoActual[0] = archivo;
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(Interfaz.this, "No se pudo guardar el archivo:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -231,7 +235,7 @@ public class Interfaz extends JFrame {
                 errorArea.setText("");
 
                 Lexico lexico = new Lexico();
-                java.util.ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
+                ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
 
                 String errores = lexico.getErrores();
                 errorArea.setText(errores);
@@ -250,7 +254,7 @@ public class Interfaz extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 errorArea.setText("");
                 Lexico lexico = new Lexico();
-                java.util.ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
+                ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
                 String erroresLexico = lexico.getErrores();
 
                 if (!erroresLexico.trim().isEmpty()) {

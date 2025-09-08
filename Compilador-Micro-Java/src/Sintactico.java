@@ -54,7 +54,7 @@ public class Sintactico {
     }
 
     private boolean statement() {
-        while (!tokens.isEmpty() && !peek(11)) { // while not }
+        while (!tokens.isEmpty() && !peek(11)) { // while y no }
             if (peek(4)) { // while
                 tokens.remove(0);
                 if (!match(12)) return false; // (
@@ -83,7 +83,7 @@ public class Sintactico {
 
     private boolean expression() {
         if (tokens.isEmpty()) return false;
-        if (peek(9) || peek(8)) { // Identifier or Integer
+        if (peek(9) || peek(8)) { // Identifier o Integer
             tokens.remove(0);
             if (isOperator()) {
                 tokens.remove(0);
@@ -94,7 +94,7 @@ public class Sintactico {
                 return false;
             }
             return true;
-        } else if (peek(6) || peek(7)) { // true or false
+        } else if (peek(6) || peek(7)) { // true o false
             tokens.remove(0);
             return true;
         }
