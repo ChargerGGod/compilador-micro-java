@@ -36,10 +36,13 @@ public class Interfaz extends JFrame {
         tokenButton.setFocusable(false);
         JButton sintaxisButton = new JButton("Sintaxis");
         sintaxisButton.setFocusable(false);
+        JButton semanticoButton = new JButton("Semántico"); // <-- Nuevo botón
+        semanticoButton.setFocusable(false);
 
         menuBar.add(Box.createHorizontalStrut(10));
         menuBar.add(tokenButton);
         menuBar.add(sintaxisButton);
+        menuBar.add(semanticoButton); // <-- Agrega el botón al menú
 
         setJMenuBar(menuBar);
 
@@ -269,6 +272,44 @@ public class Interfaz extends JFrame {
                     errorArea.setText("Correcto");
                 } else {
                     errorArea.setText("Error sintáctico");
+                }
+            }
+        });
+
+        // Acción para el botón Semántico
+        semanticoButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                errorArea.setText("");
+                Lexico lexico = new Lexico();
+                ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
+                String erroresLexico = lexico.getErrores();
+
+                if (!erroresLexico.trim().isEmpty()) {
+                    errorArea.setText("Errores léxicos:\n" + erroresLexico);
+                    return;
+                }
+
+                Sintactico sintactico = new Sintactico(new java.util.ArrayList<>(tokens));
+                boolean correcto = sintactico.sintaxisCorrecta();
+
+                if (!correcto) {
+                    errorArea.setText("Error sintáctico");
+                    return;
+                }
+
+                Semantico semantico = new Semantico();
+               semantico.analizar(tokens);
+               boolean semanticoCorrecto = semantico.getErrores().isEmpty();
+                if (semanticoCorrecto) {
+                    errorArea.setText("Semántica correcta");
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Errores semánticos:\n");
+                    for (String err : semantico.getErrores()) {
+                        sb.append(err).append("\n");
+                    }
+                    errorArea.setText(sb.toString());
                 }
             }
         });
