@@ -306,9 +306,7 @@ public class Interfaz extends JFrame {
                 } else {
                     StringBuilder sb = new StringBuilder();
                     sb.append("Errores semánticos:\n");
-                    for (String err : semantico.getErrores()) {
-                        sb.append(err).append("\n");
-                    }
+                        sb.append(semantico.getErrores());
                     errorArea.setText(sb.toString());
                 }
             }
