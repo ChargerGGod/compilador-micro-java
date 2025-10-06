@@ -32,6 +32,7 @@ class Simbolo {
 
     @Override
     public String toString(){
-        return identificador + ", " + tipo + ", " + valor + ", " + direccion;
+        String valorStr = (valor == null) ? "sin valor" : valor;
+        return identificador + ", " + tipo + ", " + valorStr + ", " + direccion;
     }
 }
