@@ -1,0 +1,8 @@
+while(a>b){
+a = a + b;
+c = c * x;
+while(c > 5) {
+c = c - 1;
+print(x);
+}
+}
