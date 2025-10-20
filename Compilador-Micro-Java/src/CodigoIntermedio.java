@@ -1,3 +1,9 @@
+/* Alumno: Kevin Ignacio Rojas Duarte
+ * NC: 22170801
+ * Materia: Lenguajes y automatas 2
+ * Profesor: Rosalio Zatarain Cabada
+ * Hora: 13:00pm - 14:00pm
+ */
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 public class CodigoIntermedio {
