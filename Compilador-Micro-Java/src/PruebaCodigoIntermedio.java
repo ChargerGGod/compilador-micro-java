@@ -6,7 +6,6 @@
  */
 import java.util.*;
 import java.util.regex.*;
-
 public class PruebaCodigoIntermedio {
 
     public static String traducirACodigoIntermedio(String codigoFuente) {
@@ -22,7 +21,6 @@ public class PruebaCodigoIntermedio {
             if (mAsig.matches()) {
                 String id = mAsig.group(1);
                 String expr = mAsig.group(2).trim();
-
                 // Expresión binaria
                 Matcher mExpr = Pattern.compile("(\\w+|\\d+)\\s*([+\\-*>|<])\\s*(\\w+|\\d+)").matcher(expr);
                 if (mExpr.matches()) {
@@ -40,7 +38,6 @@ public class PruebaCodigoIntermedio {
                     asm.append("MOV ").append(id).append(", AX\n\n");
                     continue;
                 }
-
                 // Asignación directa
                 asm.append("MOV AX, ").append(isNumeric(expr) ? expr : expr).append("\n");
                 asm.append("MOV ").append(id).append(", AX\n\n");
@@ -89,7 +86,6 @@ public class PruebaCodigoIntermedio {
 
         return asm.toString();
     }
-
     private static boolean isNumeric(String str) {
         return str.matches("\\d+");
     }

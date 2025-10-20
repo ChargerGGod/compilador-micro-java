@@ -311,6 +311,45 @@ public class Interfaz extends JFrame {
                 }
             }
         });
+        // --- Nuevo botón: Ejecutar código intermedio (agregado al menú) ---
+        JButton ejecutarCI = new JButton("Ejecutar CI");
+        ejecutarCI.setFocusable(false);
+        menuBar.add(Box.createHorizontalStrut(6));
+        menuBar.add(ejecutarCI);
+
+        ejecutarCI.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // ejecutar pipeline: léxico -> sintaxis -> semántico -> código intermedio
+                textAreaInferior1.setText("");
+                Lexico lexico = new Lexico();
+                ArrayList<Token> tokens = lexico.Tokenizar(textArea.getText());
+                String erroresLexico = lexico.getErrores();
+                if (!erroresLexico.trim().isEmpty()) {
+                    textAreaInferior1.setText("Errores léxicos:\n" + erroresLexico);
+                    return;
+                }
+
+                Sintactico sintactico = new Sintactico(new ArrayList<>(tokens));
+                boolean correcto = sintactico.sintaxisCorrecta();
+                if (!correcto) {
+                    textAreaInferior1.setText("Error sintáctico");
+                    return;
+                }
+
+                Semantico semantico = new Semantico();
+                semantico.analizar(tokens);
+                String erroresSem = semantico.getErrores();
+                if (!erroresSem.trim().isEmpty()) {
+                    textAreaInferior1.setText("Errores semánticos:\n" + erroresSem);
+                    return;
+                }
+
+                // Generar código intermedio y mostrarlo en el cuadro inferior izquierdo
+                String asm = CodigoIntermedio.generar(tokens, semantico.getTablaSimbolos());
+                textAreaInferior1.setText(asm);
+            }
+        });
 
         // Variables para controlar el tamaño de fuente
         final int[] fontSize = {14};
