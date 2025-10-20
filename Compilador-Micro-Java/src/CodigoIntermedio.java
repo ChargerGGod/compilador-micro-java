@@ -13,42 +13,34 @@ public class CodigoIntermedio {
         asm.append("        .STACK  100h\n");
         asm.append("        .DATA\n");
 
-        // Sección DATA: declarar símbolos según tablaSimbolos
+        // segmento de datos
         for (Simbolo s : ts.getTabla().values()) {
             String id = s.getIdentificador();
             String tipo = s.getTipo();
-            if ("int".equals(tipo)) {
-                asm.append(String.format("%-8s DW      ?\n", id));
-            } else if ("boolean".equals(tipo)) {
-                asm.append(String.format("%-8s DB      ?\n", id));
-            } else {
-                // por defecto DW
-                asm.append(String.format("%-8s DW      ?\n", id));
-            }
+            asm.append(String.format("%-8s %s      ?\n", id, "boolean".equals(tipo) ? "DB" : "DW"));
         }
         asm.append("\n");
-        // Código
+        // segmento de codigo
         asm.append("        .CODE\n");
         asm.append("MAIN    PROC    FAR\n");
         asm.append("        .STARTUP\n");
 
         // recorrer y traducir statements
         while (idx.get() < tokens.size()) {
-            String tk = current(tokens, idx);
-            if (tk == null) break;
-            // Skip possible class/brace tokens if present
-            if (tk.equals("}") || tk.equals("{") || tk.equals("class") ) {
+            int code = currentCode(tokens, idx);
+            if (code == -1) break;
+            if (code == 11 /* } */ || code == 10 /* { */ || code == 1 /* class */) {
                 idx.incrementAndGet();
                 continue;
             }
             translateStatement(tokens, idx, asm, ts, whileCounter);
         }
 
-        // Epílogo
+        // finalización
         asm.append("        .EXIT\n");
         asm.append("MAIN    ENDP\n\n");
-
-        // Rutina imprimir_num (igual que ejemplo). Asume AX contiene el número a imprimir.
+        
+        // Rutina imprimir_num
         asm.append("IMPRIMIR_NUM PROC\n");
         asm.append("        MOV     BX, 10\n");
         asm.append("        XOR     CX, CX\n\n");
@@ -76,28 +68,24 @@ public class CodigoIntermedio {
     private static void translateStatement(ArrayList<Token> tokens, AtomicInteger idx,
                                            StringBuilder asm, tablaSimbolos ts,
                                            AtomicInteger whileCounter) {
-        String tk = current(tokens, idx);
-        if (tk == null) return;
+        int code = currentCode(tokens, idx);
+        if (code == -1) return;
 
-        // SKIP declarations: 'int' or 'boolean' lines (consume until ';')
-        if ("int".equals(tk) || "boolean".equals(tk)) {
-            idx.incrementAndGet(); // consume type
-            // skip identifiers, possible initializers, until ';'
-            while (idx.get() < tokens.size() && !";".equals(current(tokens, idx))) {
+        // salta declaraciones: 'int' o 'boolean'
+        if (code == 2 /* int */ || code == 3 /* boolean */) {
+            for (int k = 0; k < 3 && idx.get() < tokens.size(); k++) {
                 idx.incrementAndGet();
             }
-            if (idx.get() < tokens.size() && ";".equals(current(tokens, idx))) idx.incrementAndGet();
             return;
         }
 
-        if ("print".equals(tk)) {
+        if (code == 5 /* print */) {
             // print ( Expression ) ;
             idx.incrementAndGet(); // consume 'print'
-            expect(tokens, idx, "(");
-            // colocar resultado de la expresión en AX
+            idx.incrementAndGet();  // consume '('
             generateExpressionIntoAX(tokens, idx, asm, ts);
-            expect(tokens, idx, ")");
-            expect(tokens, idx, ";");
+           idx.incrementAndGet(); // consume ')'
+            idx.incrementAndGet();// consume ';'
             // Llamada imprimir
             asm.append("        CALL    IMPRIMIR_NUM\n");
             asm.append("        MOV     DL, 0AH\n");
@@ -108,25 +96,25 @@ public class CodigoIntermedio {
             return;
         }
 
-        if ("while".equals(tk)) {
-            // while ( Expression ) { Statement* }
+        if (code == 4 /* while */) {
             int thisWhile = whileCounter.getAndIncrement();
             String lblWhile = "WHILE" + thisWhile;
             String lblEnd = "ENDW" + thisWhile;
             idx.incrementAndGet(); // consume 'while'
-            expect(tokens, idx, "(");
+            idx.incrementAndGet(); // consume '('
 
-            // parse condition expression for > or <
-            Token leftTok = tokens.get(idx.get());
-            String left = leftTok.getToken();
+            //ID/NUM/op/ID/NUM
+            Token leftTok = safeGet(tokens, idx.get());
             idx.incrementAndGet();
-            Token opTok = tokens.get(idx.get());
-            String op = opTok.getToken();
+            Token opTok = safeGet(tokens, idx.get());
             idx.incrementAndGet();
-            Token rightTok = tokens.get(idx.get());
-            String right = rightTok.getToken();
+            Token rightTok = safeGet(tokens, idx.get());
             idx.incrementAndGet();
-            expect(tokens, idx, ")");
+            idx.incrementAndGet();  // consume ')'
+
+            String left = (leftTok != null) ? leftTok.getToken() : "0";
+            int opCode = (opTok != null) ? opTok.getCodigo() : -1;
+            String right = (rightTok != null) ? rightTok.getToken() : "0";
 
             // etiqueta inicio
             asm.append(lblWhile).append(":\n");
@@ -135,20 +123,21 @@ public class CodigoIntermedio {
             // comparar
             asm.append("        CMP     AX, ").append(right).append("\n");
             // saltar a fin según operación
-            if (">".equals(op)) {
+            if (opCode == 19 /* > */) {
                 asm.append("        JLE     ").append(lblEnd).append("\n");
-            } else if ("<".equals(op)) {
+            } else if (opCode == 18 /* < */) {
                 asm.append("        JGE     ").append(lblEnd).append("\n");
+            } else {
+                asm.append("        JMP     ").append(lblEnd).append("\n");
             }
 
-            // consumir '{'
-            expect(tokens, idx, "{");
+            idx.incrementAndGet();
 
-            // traducir statements hasta matching '}'
+            // traducir statements hasta  '}'
             while (idx.get() < tokens.size()) {
-                String cur = current(tokens, idx);
-                if ("}".equals(cur)) {
-                    idx.incrementAndGet(); // consume '}'
+                int cur = currentCode(tokens, idx);
+                if (cur == 11 /* } */) {
+                    idx.incrementAndGet();
                     break;
                 }
                 translateStatement(tokens, idx, asm, ts, whileCounter);
@@ -160,195 +149,132 @@ public class CodigoIntermedio {
             return;
         }
 
-        // Assignment: Identifier = Expression ;
-        if (isIdentifier(tk)) {
-            String id = tk;
+        // asignacion: Identifier = Expression ;
+        if (code == 9 /* ID */) {
+            String id = currentLexeme(tokens, idx);
             idx.incrementAndGet(); // consume id
-            expect(tokens, idx, "=");
+            idx.incrementAndGet(); //consume '='
 
-            // detect simple RHS (until semicolon)
             int exprStart = idx.get();
             int scan = exprStart;
-            while (scan < tokens.size() && !";".equals(tokens.get(scan).getToken())) scan++;
-            int exprEnd = scan; // position of ';'
-            List<String> exprTokens = new ArrayList<>();
-            for (int i = exprStart; i < exprEnd; i++) exprTokens.add(tokens.get(i).getToken());
+            while (scan < tokens.size() && tokens.get(scan).getCodigo() != 14 /* ; */) scan++;
+            int exprEnd = scan; 
 
-            Simbolo destSym = ts.getSimbolo(id);
-            String destType = (destSym != null) ? destSym.getTipo() : "int";
-
-            boolean handledDirect = false;
-            // simple single token RHS
-            if (exprTokens.size() == 1) {
-                String right = exprTokens.get(0);
-                if ("true".equals(right) || "false".equals(right) || isNumeric(right)) {
-                    // literal assignment -> MOV <id>, imm
-                    String imm = ("true".equals(right)) ? "1" : ("false".equals(right) ? "0" : right);
-                    if ("int".equals(destType)) {
-                        asm.append("        MOV     ").append(id).append(", ").append(imm).append("\n");
-                    } else if ("boolean".equals(destType)) {
-                        asm.append("        MOV     ").append(id).append(", ").append(imm).append("\n");
+            if (exprEnd - exprStart == 1) {
+                Token r = tokens.get(exprStart);
+                int rcode = r.getCodigo();
+                String rlex = r.getToken();
+                // mover literal o id directamente
+                if (rcode == 6 /* true */) {
+                    // boolean true -> 1
+                    if (ts.getSimbolo(id) != null && "boolean".equals(ts.getSimbolo(id).getTipo())) {
+                        asm.append("        MOV     ").append(id).append(", 1\n");
                     } else {
-                        asm.append("        MOV     ").append(id).append(", ").append(imm).append("\n");
+                        asm.append("        MOV     ").append(id).append(", 1\n");
                     }
-                    handledDirect = true;
-                } else if (isIdentifier(right)) {
-                    // simple identifier -> move memory-to-memory with proper handling of sizes
-                    Simbolo srcSym = ts.getSimbolo(right);
-                    String srcType = (srcSym != null) ? srcSym.getTipo() : "int";
-                    if ("int".equals(destType) && "int".equals(srcType)) {
-                        asm.append("        MOV     ").append(id).append(", ").append(right).append("\n");
-                    } else if ("boolean".equals(destType) && "boolean".equals(srcType)) {
-                        asm.append("        MOV     ").append(id).append(", ").append(right).append("\n");
-                    } else if ("int".equals(destType) && "boolean".equals(srcType)) {
-                        // zero-extend byte -> word
-                        asm.append("        MOV     AL, ").append(right).append("\n");
-                        asm.append("        MOV     AH, 0\n");
-                        asm.append("        MOV     ").append(id).append(", AX\n");
-                    } else if ("boolean".equals(destType) && "int".equals(srcType)) {
-                        // truncate word -> byte (take low byte)
-                        asm.append("        MOV     AX, ").append(right).append("\n");
-                        asm.append("        MOV     ").append(id).append(", AL\n");
+                } else if (rcode == 7 /* false */) {
+                    asm.append("        MOV     ").append(id).append(", 0\n");
+                } else if (rcode == 8 /* NUM */) {
+                    asm.append("        MOV     ").append(id).append(", ").append(rlex).append("\n");
+                } else { // ID
+                    Simbolo dest = ts.getSimbolo(id);
+                    if (dest != null && "boolean".equals(dest.getTipo())) {
+                        asm.append("        MOV     ").append(id).append(", ").append(rlex).append("\n");
                     } else {
-                        // fallback: load into AX then store
-                        // prepare idx to point to RHS for generateExpressionIntoAX
-                        idx.set(exprStart);
-                        generateExpressionIntoAX(tokens, idx, asm, ts);
-                        if ("int".equals(destType)) {
-                            asm.append("        MOV     ").append(id).append(", AX\n");
-                        } else {
-                            asm.append("        MOV     ").append(id).append(", AL\n");
-                        }
+                        asm.append("        MOV     ").append(id).append(", ").append(rlex).append("\n");
                     }
-                    handledDirect = true;
                 }
-            }
-
-            if (handledDirect) {
-                // advance idx to after semicolon
                 idx.set(exprEnd + 1);
                 return;
             }
 
-            // fallback: generate expression into AX and then move to variable respecting sizes
+            // generar expresión en AX y mover según tipo destino
             idx.set(exprStart);
             generateExpressionIntoAX(tokens, idx, asm, ts);
-            expect(tokens, idx, ";");
-            if ("int".equals(destType)) {
-                asm.append("        MOV     ").append(id).append(", AX\n");
-            } else if ("boolean".equals(destType)) {
+            idx.incrementAndGet();// consumir ';'
+
+            Simbolo destSym = ts.getSimbolo(id);
+            String destType = (destSym != null) ? destSym.getTipo() : "int";
+            if ("boolean".equals(destType)) {
                 asm.append("        MOV     ").append(id).append(", AL\n");
             } else {
                 asm.append("        MOV     ").append(id).append(", AX\n");
             }
             return;
         }
-
-        // If unknown token, just consume it to avoid infinite loop
         idx.incrementAndGet();
     }
 
-    // Genera código que deja el valor de la expresión en AX. Avanza idx.
+    // Genera código que deja el valor de la expresión en AX.
     private static void generateExpressionIntoAX(ArrayList<Token> tokens, AtomicInteger idx,
                                                  StringBuilder asm, tablaSimbolos ts) {
         if (idx.get() >= tokens.size()) return;
         Token t1 = tokens.get(idx.get());
         if (t1 == null) return;
+        int code1 = t1.getCodigo();
         String s1 = t1.getToken();
         if (s1 == null) return;
-        if (s1.equals(";") || s1.equals(")") || s1.equals("{") || s1.equals("}")) return;
+        if (code1 == 14 /* ; */ || code1 == 13 /* ) */ || code1 == 10 /* { */ || code1 == 11 /* } */) return;
 
-        // lookahead for binary operator
         if (idx.get() + 1 < tokens.size()) {
-            String possibleOp = tokens.get(idx.get() + 1).getToken();
-            if ("+".equals(possibleOp) || "-".equals(possibleOp) || "*".equals(possibleOp)
-                || "<".equals(possibleOp) || ">".equals(possibleOp)) {
-                // binary
+            int possibleOpCode = tokens.get(idx.get() + 1).getCodigo();
+            if (possibleOpCode == 16 /* + */ || possibleOpCode == 17 /* - */ || possibleOpCode == 20 /* * */
+                || possibleOpCode == 18 /* < */ || possibleOpCode == 19 /* > */) {
+    
                 String left = s1;
-                String op = possibleOp;
-                // advance to right operand
-                idx.incrementAndGet();
+                int op = possibleOpCode;
+                idx.incrementAndGet(); 
                 idx.incrementAndGet();
                 if (idx.get() >= tokens.size()) return;
                 Token rightTok = tokens.get(idx.get());
                 if (rightTok == null) return;
                 String right = rightTok.getToken();
+                int rightCode = rightTok.getCodigo();
                 idx.incrementAndGet();
-                // comparison (<,>)
-                if ("<".equals(op) || ">".equals(op)) {
+
+                // comparaciones <, >
+                if (op == 18 /* < */ || op == 19 /* > */) {
                     loadOperandIntoAX(left, asm, ts);
                     asm.append("        CMP     AX, ").append(right).append("\n");
                     String lblTrue = newLabel("CMP_TRUE");
                     String lblEnd = newLabel("CMP_END");
-                    asm.append("        J"); // choose below
-                    if (">".equals(op)) {
-                        asm.append("G      ").append(lblTrue).append("\n");
+                    if (op == 19 /* > */) {
+                        asm.append("        JG      ").append(lblTrue).append("\n");
                     } else {
-                        asm.append("L      ").append(lblTrue).append("\n");
+                        asm.append("        JL      ").append(lblTrue).append("\n");
                     }
-                    // false
                     asm.append("        MOV     AX, 0\n");
                     asm.append("        JMP     ").append(lblEnd).append("\n");
-                    // true
                     asm.append(lblTrue).append(":\n");
                     asm.append("        MOV     AX, 1\n");
                     asm.append(lblEnd).append(":\n");
                     return;
                 }
 
-                // arithmetic (+,-,*)
+                // operaciones aritméticas +, -, *
                 loadOperandIntoAX(left, asm, ts);
-                if ("+".equals(op)) {
-                    if (isNumeric(right)) {
-                        asm.append("        ADD     AX, ").append(right).append("\n");
-                    } else {
-                        // right is identifier: ensure word load
-                        Simbolo s = ts.getSimbolo(right);
-                        if (s != null && "boolean".equals(s.getTipo())) {
-                            // add byte -> extend to BX first
-                            asm.append("        MOV     BL, ").append(right).append("\n");
-                            asm.append("        MOV     BH, 0\n");
-                            asm.append("        ADD     AX, BX\n");
-                        } else {
-                            asm.append("        ADD     AX, ").append(right).append("\n");
-                        }
-                    }
-                } else if ("-".equals(op)) {
-                    if (isNumeric(right)) {
-                        asm.append("        SUB     AX, ").append(right).append("\n");
-                    } else {
-                        Simbolo s = ts.getSimbolo(right);
-                        if (s != null && "boolean".equals(s.getTipo())) {
-                            asm.append("        MOV     BL, ").append(right).append("\n");
-                            asm.append("        MOV     BH, 0\n");
-                            asm.append("        SUB     AX, BX\n");
-                        } else {
-                            asm.append("        SUB     AX, ").append(right).append("\n");
-                        }
-                    }
-                } else if ("*".equals(op)) {
-                    if (isNumeric(right)) {
-                        asm.append("        MOV     BX, ").append(right).append("\n");
-                    } else {
-                        asm.append("        MOV     BX, ").append(right).append("\n");
-                    }
-                    asm.append("        IMUL    BX\n"); // AX = AX * BX
+                if (op == 16 /* + */) {
+                    asm.append("        ADD     AX, ").append(right).append("\n");
+                } else if (op == 17 /* - */) {
+                    asm.append("        SUB     AX, ").append(right).append("\n");
+                } else if (op == 20 /* * */) {
+                    asm.append("        MOV     BX, ").append(right).append("\n");
+                    asm.append("        IMUL    BX\n");
                 }
                 return;
             }
         }
 
-        // Not binary: single token
         idx.incrementAndGet();
-        if ("true".equals(s1)) {
+        if (code1 == 6 /* true */) {
             asm.append("        MOV     AX, 1\n");
             return;
         }
-        if ("false".equals(s1)) {
+        if (code1 == 7 /* false */) {
             asm.append("        MOV     AX, 0\n");
             return;
         }
-        if (isNumeric(s1)) {
+        if (code1 == 8 /* NUM */) {
             asm.append("        MOV     AX, ").append(s1).append("\n");
             return;
         }
@@ -362,11 +288,11 @@ public class CodigoIntermedio {
         }
     }
 
-    // Carga un operando (literal o id) en AX (si id es DB, pone AL y limpia AH)
+    // Carga un operando 
     private static void loadOperandIntoAX(String operand, StringBuilder asm, tablaSimbolos ts) {
         if (operand == null) return;
         if (operand.equals(";") || operand.equals(")") || operand.equals("{") || operand.equals("}")) return;
-        if (isNumeric(operand)) {
+        if (operand.matches("\\d+")) {
             asm.append("        MOV     AX, ").append(operand).append("\n");
             return;
         }
@@ -379,40 +305,26 @@ public class CodigoIntermedio {
         }
     }
 
-    // helpers ----------------------------------------------------------------
-
-    private static String currentTokenString(ArrayList<Token> tokens, AtomicInteger idx) {
-        if (idx.get() >= tokens.size()) return null;
-        return tokens.get(idx.get()).getToken();
+    private static int currentCode(ArrayList<Token> tokens, AtomicInteger idx) {
+        if (idx.get() >= tokens.size()) return -1;
+        return tokens.get(idx.get()).getCodigo();
     }
 
-    private static String current(ArrayList<Token> tokens, AtomicInteger idx) {
+    private static String currentLexeme(ArrayList<Token> tokens, AtomicInteger idx) {
         if (idx.get() >= tokens.size()) return null;
         Token t = tokens.get(idx.get());
         return (t == null) ? null : t.getToken();
     }
 
-    private static void expect(ArrayList<Token> tokens, AtomicInteger idx, String expected) {
-        if (idx.get() < tokens.size() && expected.equals(current(tokens, idx))) {
-            idx.incrementAndGet();
-        } else {
-            // intentar avanzar para evitar bucle infinito
-            if (idx.get() < tokens.size()) idx.incrementAndGet();
-        }
-    }
-
-    private static boolean isNumeric(String s) {
-        return s != null && s.matches("\\d+");
-    }
-
-    private static boolean isIdentifier(String s) {
-        return s != null && s.matches("[A-Za-z_][A-Za-z0-9_]*");
+    private static Token safeGet(ArrayList<Token> tokens, int pos) {
+        if (pos < 0 || pos >= tokens.size()) return null;
+        return tokens.get(pos);
     }
 
     // Contador para etiquetas auxiliares de comparaciones
     private static AtomicInteger auxLabelCounter = new AtomicInteger(0);
     private static String newLabel(String base) {
         int n = auxLabelCounter.getAndIncrement();
-        return base + n; // devuelve nombre sin ':'; llamador agrega ':' si quiere
+        return base + n;
     }
 }

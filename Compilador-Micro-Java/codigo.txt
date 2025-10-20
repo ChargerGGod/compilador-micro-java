@@ -3,10 +3,16 @@ class SUMA {
 	boolean z;
 	int y;
 	x = 1;
-	z = x < 0;
+	y = 1;
+	z = x > 5;	
 	print(z); 
 	while(x  < 256){
 	x = x * 2;
 	print(x);
+	while( y > 0){
+	print(y);
+	y = y - 1;
+} 
+	y= 1;	
 }
 }

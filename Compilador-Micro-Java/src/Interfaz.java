@@ -245,7 +245,7 @@ public class Interfaz extends JFrame {
 
                 if (errores.trim().isEmpty()) {
                     for (Token token : tokens) {
-                        tableModel.addRow(new Object[]{token.getToken(), token.getLexema()});
+                        tableModel.addRow(new Object[]{token.getToken(), token.getToken()});
                     }
                 }
             }
