@@ -265,7 +265,7 @@ public class CodigoIntermedio {
                     asm.append("        SUB     AX, ").append(right).append("\n");
                 } else if (op == 20 /* * */) {
                     asm.append("        MOV     BX, ").append(right).append("\n");
-                    asm.append("        IMUL    BX\n");
+                    asm.append("        MUL    BX\n");
                 }
                 return;
             }
