@@ -12,6 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Interfaz extends JFrame {
+    // Guardar la tabla de símbolos resultante de la última ejecución semántica
+    private tablaSimbolos tablaActual = null;
+
     public Interfaz() {
         setTitle("Compilador Micro Java");
         setExtendedState(JFrame.MAXIMIZED_BOTH); 
@@ -39,10 +42,15 @@ public class Interfaz extends JFrame {
         JButton semanticoButton = new JButton("Semántico"); // <-- Nuevo botón
         semanticoButton.setFocusable(false);
 
+        // Nuevo botón: Código Objeto (junto a los otros botones)
+        JButton codigoObjetoButton = new JButton("Código Objeto");
+        codigoObjetoButton.setFocusable(false);
+
         menuBar.add(Box.createHorizontalStrut(10));
         menuBar.add(tokenButton);
         menuBar.add(sintaxisButton);
         menuBar.add(semanticoButton); // <-- Agrega el botón al menú
+        menuBar.add(codigoObjetoButton); // <-- Agrega el botón Código Objeto
 
         setJMenuBar(menuBar);
 
@@ -311,6 +319,7 @@ public class Interfaz extends JFrame {
                 }
             }
         });
+
         // --- Nuevo botón: Ejecutar código intermedio (agregado al menú) ---
         JButton ejecutarCI = new JButton("Ejecutar CI");
         ejecutarCI.setFocusable(false);
@@ -345,9 +354,58 @@ public class Interfaz extends JFrame {
                     return;
                 }
 
+                // Guardar la tabla de símbolos para que la generación de código objeto
+                // conozca tamaños DB/DW (boolean/int)
+                tablaActual = semantico.getTablaSimbolos();
+
                 // Generar código intermedio y mostrarlo en el cuadro inferior izquierdo
-                String asm = CodigoIntermedio.generar(tokens, semantico.getTablaSimbolos());
+                String asm = CodigoIntermedio.generar(tokens, tablaActual);
                 textAreaInferior1.setText(asm);
+            }
+        });
+
+        // Acción para el botón "Código Objeto" -> tokeniza el texto que está en el cuadro inferior izquierdo
+        codigoObjetoButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String codigoIntermedio = textAreaInferior1.getText();
+                    if (codigoIntermedio == null || codigoIntermedio.trim().isEmpty()) {
+                        textAreaInferior2.setText("No hay código intermedio en el cuadro izquierdo.");
+                        scrollInferior2.setViewportView(textAreaInferior2);
+                        return;
+                    }
+                    CodigoObjeto co = new CodigoObjeto();
+                    ArrayList<TokenIntermedio> toks = co.primeraPasadaTokens(codigoIntermedio, tablaActual);
+                    ArrayList<TokenTraducido> trad = co.traducirAObjeto(toks, tablaActual);
+
+                    if (trad == null || trad.isEmpty()) {
+                        textAreaInferior2.setText("(no se generaron tokens traducidos)");
+                        scrollInferior2.setViewportView(textAreaInferior2);
+                        return;
+                    }
+
+                    String[] cols = {"Offset", "Binario", "Instruccion"};
+                    DefaultTableModel modelTrad = new DefaultTableModel(cols, 0) {
+                        @Override public boolean isCellEditable(int row, int col) { return false; }
+                    };
+                    for (TokenTraducido tt : trad) {
+                        modelTrad.addRow(new Object[]{ tt.getOffset(), tt.getBinario(), tt.getInstruccion() });
+                    }
+
+                    JTable tablaTrad = new JTable(modelTrad);
+                    tablaTrad.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+                    tablaTrad.getColumnModel().getColumn(0).setPreferredWidth(200);
+                    tablaTrad.getColumnModel().getColumn(1).setPreferredWidth(400);
+                    tablaTrad.getColumnModel().getColumn(2).setPreferredWidth(200);
+                    tablaTrad.setFont(textAreaInferior2.getFont());
+                    tablaTrad.getTableHeader().setFont(tablaTrad.getTableHeader().getFont().deriveFont(Font.BOLD));
+
+                    scrollInferior2.setViewportView(tablaTrad);
+                } catch (Exception ex) {
+                    textAreaInferior2.setText("Error al generar tokens de código objeto:\n" + ex.getMessage());
+                    scrollInferior2.setViewportView(textAreaInferior2);
+                }
             }
         });
 

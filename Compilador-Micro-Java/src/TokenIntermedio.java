@@ -1,3 +1,6 @@
+import java.util.Map;
+import java.util.HashMap;
+
 public class TokenIntermedio {
     private String intruccion;
     private String destino;
@@ -5,8 +8,14 @@ public class TokenIntermedio {
     private String tipoDir; // reg-mem mem-imm reg-reg reg-imm label reg mem
     private Integer tamanioDireccionamiento; // 8 o 16 (null si no determinado)
 
-    private String [] registros16Bits = {"AX","BX","CX","DX","SI","DI","SP","BP"};
-    private String [] registros8Bits  = {"AL","BL","CL","DL","AH","BH","CH","DH"};
+    // Mapa robusto de registros -> tamaño en bits
+    private static final Map<String, Integer> REGISTER_SIZES = new HashMap<>();
+    static {
+        String[] regs16 = {"AX","BX","CX","DX","SI","DI","SP","BP"};
+        String[] regs8  = {"AL","BL","CL","DL","AH","BH","CH","DH"};
+        for (String r : regs16) REGISTER_SIZES.put(r, 16);
+        for (String r : regs8)  REGISTER_SIZES.put(r, 8);
+    }
 
     // Referencia a la tabla de símbolos que ya tienes (contiene variables en memoria con tipo "boolean" o "int")
     private tablaSimbolos tablaSim = null;
@@ -135,24 +144,60 @@ public class TokenIntermedio {
 
     private boolean isRegister(String s) {
         if (s == null) return false;
-        String val = s.trim().toUpperCase();
-        for (String reg : registros16Bits) if (reg.equals(val)) return true;
-        for (String reg : registros8Bits)  if (reg.equals(val)) return true;
-        return false;
+        String norm = normalizeRegisterToken(s);
+        return REGISTER_SIZES.containsKey(norm);
     }
 
     private int getRegisterSize(String s) {
         if (s == null) return 0;
-        String val = s.trim().toUpperCase();
-        for (String reg : registros16Bits) if (reg.equals(val)) return 16;
-        for (String reg : registros8Bits)  if (reg.equals(val)) return 8;
-        return 0;
+        String norm = normalizeRegisterToken(s);
+        Integer v = REGISTER_SIZES.get(norm);
+        return (v != null) ? v : 0;
     }
 
+    // Normaliza el operando para identificar correctamente registros:
+    // - quita corchetes, comas, paréntesis y calificadores como "BYTE PTR" / "WORD PTR"
+    // - conserva sólo letras y dígitos (mayúsculas)
+    private String normalizeRegisterToken(String s) {
+        if (s == null) return "";
+        String v = s.trim().toUpperCase();
+        // quitar corchetes envolventes
+        if (v.startsWith("[") && v.endsWith("]")) {
+            v = v.substring(1, v.length() - 1).trim();
+        }
+        // eliminar calificadores comunes
+        v = v.replaceAll("(?i)BYTE\\s+PTR", "");
+        v = v.replaceAll("(?i)WORD\\s+PTR", "");
+        // eliminar sufijo 'H' solo si es parte de un literal; para registros se mantienen letras.
+        // eliminar caracteres que no sean letras/dígitos
+        v = v.replaceAll("[^A-Z0-9]", "");
+        return v;
+    }
+
+    // Mejora: reconocer inmediatos hexadecimales (sufijo H), 0x..., decimales y literales de carácter 'c'
     private boolean isImmediate(String s) {
         if (s == null) return false;
         String val = s.trim();
-        return val.matches("-?\\d+");
+        if (val.isEmpty()) return false;
+
+        // Char literal: 'A' , '\n' etc. (simple)
+        if (val.matches("^'.+'$")) return true;
+
+        String up = val.toUpperCase();
+
+        // Decimal entero con signo opcional
+        if (up.matches("-?\\d+")) return true;
+
+        // Hex con sufijo H (ej. 0AH, 02H, A0H)
+        if (up.matches("^[0-9A-F]+H$")) return true;
+
+        // Hex 0xFF style
+        if (up.matches("^0X[0-9A-F]+$")) return true;
+
+        // Caso: valores con sufijo H y posible trailing non-alnum (por seguridad)
+        if (up.replaceAll("[^0-9A-FH]", "").matches("^[0-9A-F]+H$")) return true;
+
+        return false;
     }
 
     private boolean isLabel(String s) {
@@ -202,9 +247,13 @@ public class TokenIntermedio {
                 if (sz != null) return sz;
             }
         }
-        // Intentar coincidencia completa
         Integer direct = getMemVarSize(o);
         if (direct != null) return direct;
         return null;
+    }
+    @Override
+    public String toString() {
+        return intruccion + " " + (destino != null ? destino : "") + (fuente != null ? ", " + fuente : "") +
+               " [" + tipoDir + (tamanioDireccionamiento != null ? ", " + tamanioDireccionamiento + " bits" : "") + "]";
     }
 }
