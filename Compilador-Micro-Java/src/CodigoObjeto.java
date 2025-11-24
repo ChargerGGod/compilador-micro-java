@@ -176,6 +176,13 @@ public class CodigoObjeto {
             StringBuilder binStr = new StringBuilder();
             for (String b : bytes) binStr.append(b).append(" ");
             
+            // Si la instrucción resultante es únicamente NOP(s), no añadir nada al listado de salida
+            if (esSoloNops(bytes)) {
+                // actualizar IP igual que siempre (la instrucción sigue existiendo en el tamaño)
+                ip += calcularTamanoInstruccion(t);
+                continue;
+            }
+            
             salida.add(new TokenTraducido(String.format("CODE+%04Xh", ip), binStr.toString().trim(), human));
             
             // Actualizar IP con el tamaño real calculado
@@ -183,7 +190,21 @@ public class CodigoObjeto {
         }
         return salida;
     }
-
+    
+    // Comprueba si la lista de bytes representa únicamente NOPs (0x90).
+    private boolean esSoloNops(List<String> bytes) {
+        if (bytes == null || bytes.isEmpty()) return false;
+        String nop = byteToBin(0x90);
+        for (String b : bytes) {
+            if (b == null) return false;
+            String t = b.trim();
+            // si es un descriptor de memoria [lo hi] no es NOP
+            if (t.startsWith("[")) return false;
+            if (!t.equals(nop)) return false;
+        }
+        return true;
+    }
+    
     // MÉTODOS HELPERS DE EMISIÓN
     private void emitirALU(TokenIntermedio t, List<String> out, int baseRegReg, int baseImmReg, int baseImmMem, Map<String, Integer> dataOffsets) {
         String dst = t.getDestino();

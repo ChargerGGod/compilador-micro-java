@@ -253,7 +253,7 @@ public class Interfaz extends JFrame {
 
                 if (errores.trim().isEmpty()) {
                     for (Token token : tokens) {
-                        tableModel.addRow(new Object[]{token.getToken(), token.getToken()});
+                        tableModel.addRow(new Object[]{token.getToken(), token.getLexema()});
                     }
                 }
             }
@@ -396,7 +396,7 @@ public class Interfaz extends JFrame {
                     JTable tablaTrad = new JTable(modelTrad);
                     tablaTrad.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
                     tablaTrad.getColumnModel().getColumn(0).setPreferredWidth(200);
-                    tablaTrad.getColumnModel().getColumn(1).setPreferredWidth(400);
+                    tablaTrad.getColumnModel().getColumn(1).setPreferredWidth(450);
                     tablaTrad.getColumnModel().getColumn(2).setPreferredWidth(200);
                     tablaTrad.setFont(textAreaInferior2.getFont());
                     tablaTrad.getTableHeader().setFont(tablaTrad.getTableHeader().getFont().deriveFont(Font.BOLD));
