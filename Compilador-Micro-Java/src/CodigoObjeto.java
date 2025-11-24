@@ -8,9 +8,7 @@ public class CodigoObjeto {
     private static final Pattern P_VAR   = Pattern.compile("^([A-Za-z_]\\w*)\\s+(DB|DW)\\b\\s*(.*)$", Pattern.CASE_INSENSITIVE);
     private static final Pattern P_PROC  = Pattern.compile("^([A-Za-z_]\\w*)\\s+PROC\\b(.*)$", Pattern.CASE_INSENSITIVE);
 
-    /**
-     * FASE 1: PARSER (Convierte texto a Tokens)
-     */
+    //FASE 1: PARSER (Convierte texto a Tokens)
     public ArrayList<TokenIntermedio> primeraPasadaTokens(String codigo, tablaSimbolos ts) {
         ArrayList<TokenIntermedio> tokens = new ArrayList<>();
         if (codigo == null) return tokens;
