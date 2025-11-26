@@ -16,4 +16,8 @@ public class Token {
     public int getCodigo() {
         return codigo;
     }
+    @Override
+    public String toString() {
+        return token;
+    }
 }

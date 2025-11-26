@@ -1,3 +1,9 @@
+/* Alumno: Kevin Ignacio Rojas Duarte
+ * NC: 22170801
+ * Materia: Lenguajes y automatas 2
+ * Profesor: Rosalio Zatarain Cabada
+ * Hora: 13:00pm - 14:00pm
+ */
 import java.util.*;
 import java.util.regex.*;
 
@@ -176,7 +182,6 @@ public class CodigoObjeto {
             StringBuilder binStr = new StringBuilder();
             for (String b : bytes) binStr.append(b).append(" ");
             
-            // Si la instrucción resultante es únicamente NOP(s), no añadir nada al listado de salida
             if (esSoloNops(bytes)) {
                 // actualizar IP igual que siempre (la instrucción sigue existiendo en el tamaño)
                 ip += calcularTamanoInstruccion(t);
@@ -198,7 +203,6 @@ public class CodigoObjeto {
         for (String b : bytes) {
             if (b == null) return false;
             String t = b.trim();
-            // si es un descriptor de memoria [lo hi] no es NOP
             if (t.startsWith("[")) return false;
             if (!t.equals(nop)) return false;
         }

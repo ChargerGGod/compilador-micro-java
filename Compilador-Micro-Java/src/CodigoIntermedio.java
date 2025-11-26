@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CodigoIntermedio {
 
     public static String generar(ArrayList<Token> tokens, tablaSimbolos ts) {
+        boolean usesPrint = tokens.stream().anyMatch(t -> t.getCodigo() == 5 /* print */);
         StringBuilder asm = new StringBuilder();
         AtomicInteger idx = new AtomicInteger(0);
         AtomicInteger whileCounter = new AtomicInteger(0);
@@ -45,7 +46,9 @@ public class CodigoIntermedio {
         // finalización
         asm.append("        .EXIT\n");
         asm.append("MAIN    ENDP\n\n");
-        
+        if (!usesPrint) {
+            return asm.toString();
+        }
         // Rutina imprimir_num
         asm.append("IMPRIMIR_NUM PROC\n");
         asm.append("        MOV     BX, 10\n");
