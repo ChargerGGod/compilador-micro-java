@@ -217,25 +217,31 @@ public class CodigoObjeto {
         boolean srcReg = isRegister(src);
         boolean srcImm = isImmediate(src);
 
+        // calcular W: 0 = 8-bit, 1 = 16-bit
+        int w = calcularW(dst, src);
+
         if (dstReg && srcReg) { // Reg, Reg
-            addByte(out, baseRegReg | 1);
+            addByte(out, baseRegReg | (w & 1));
             addByte(out, (0b11 << 6) | ((regCode(src) & 7) << 3) | (regCode(dst) & 7));
         } 
         else if (dstReg && !srcReg && !srcImm) { // Reg, Mem
-            addByte(out, baseRegReg | 2 | 1);
+            addByte(out, baseRegReg | 2 | (w & 1));
             addByte(out, (0b00 << 6) | ((regCode(dst) & 7) << 3) | 0b110);
             addDataOffset(out, dataOffsets.getOrDefault(strip(src), 0));
         }
         else if (!dstReg && srcReg) { // Mem, Reg
-            addByte(out, baseRegReg | 1);
+            addByte(out, baseRegReg | (w & 1));
             addByte(out, (0b00 << 6) | ((regCode(src) & 7) << 3) | 0b110);
             addDataOffset(out, dataOffsets.getOrDefault(strip(dst), 0));
         }
         else if (dstReg && srcImm) { // Reg, Imm
             if (t.getIntruccion().equalsIgnoreCase("MOV")) {
-                addByte(out, baseImmReg | 8 | (regCode(dst) & 7));
-                addWord(out, parseImmediateValue(src));
+                // baseImmReg es la base para r8 (0xB0); sumamos (w<<3) para obtener r16 (0xB8) cuando w==1
+                addByte(out, (baseImmReg + (w << 3)) | (regCode(dst) & 7));
+                if (w == 1) addWord(out, parseImmediateValue(src));
+                else addByte(out, parseImmediateValue(src) & 0xFF);
             } else {
+                // instrucciones ALU con inmediato grande usan 0x81 (word). Para soporte byte extra habría que usar 0x6A/0x80 según el caso.
                 addByte(out, 0x81);
                 int ext = getAluExtension(t.getIntruccion());
                 addByte(out, (0b11 << 6) | (ext << 3) | (regCode(dst) & 7));
@@ -243,12 +249,13 @@ public class CodigoObjeto {
             }
         }
         else if (!dstReg && srcImm) { // Mem, Imm
-            int opcode = t.getIntruccion().equalsIgnoreCase("MOV") ? 0xC7 : 0x81;
+            int opcode = t.getIntruccion().equalsIgnoreCase("MOV") ? (w == 1 ? 0xC7 : 0xC6) : 0x81;
             addByte(out, opcode);
             int ext = t.getIntruccion().equalsIgnoreCase("MOV") ? 0 : getAluExtension(t.getIntruccion());
             addByte(out, (0b00 << 6) | ((ext & 7) << 3) | 0b110);
             addDataOffset(out, dataOffsets.getOrDefault(strip(dst), 0));
-            addWord(out, parseImmediateValue(src));
+            if (w == 1) addWord(out, parseImmediateValue(src));
+            else addByte(out, parseImmediateValue(src) & 0xFF);
         }
         else {
             addByte(out, 0x90); // Fallback NOP
@@ -396,5 +403,23 @@ public class CodigoObjeto {
 
     private int getAluExtension(String instr) {
         switch(instr) { case "ADD": return 0; case "OR": return 1; case "SUB": return 5; case "CMP": return 7; case "XOR": return 6; default: return 0; }
+    }
+
+    // Helpers para calcular la W (8/16 bits)
+    private int calcularW(String dst, String src) {
+        // Si uno de los operandos es registro, usar su tamaño
+        if (isRegister(dst)) return is8BitRegister(dst) ? 0 : 1;
+        if (isRegister(src)) return is8BitRegister(src) ? 0 : 1;
+        // Si ninguno es registro (memoria/immediato), asumimos palabra (16 bits) por defecto
+        return 1;
+    }
+
+    private boolean is8BitRegister(String s) {
+        if (s == null) return false;
+        String r = s.toUpperCase().trim();
+        return r.equals("AL") || r.equals("AH") ||
+               r.equals("BL") || r.equals("BH") ||
+               r.equals("CL") || r.equals("CH") ||
+               r.equals("DL") || r.equals("DH");
     }
 }
